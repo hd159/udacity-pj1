@@ -381,7 +381,7 @@ def shows():
         res['artist_image_link'] = row['Artist'].image_link
         res['venue_id'] = row['Show'].venue_id
         res['venue_name'] = row['Venue'].name
-        res['start_time'] = '2019-05-21T21:30:00.000Z'
+        res['start_time'] = row['Show'].start_time.strftime("%b %d %Y ")
         data.append(res)
 
     return render_template('pages/shows.html', shows=data)
