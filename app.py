@@ -4,7 +4,6 @@
 from email.utils import localtime
 from functools import reduce
 import json
-from unittest import result
 import dateutil.parser
 import babel
 from flask import Flask, render_template, request, Response, flash, redirect, session, url_for
@@ -15,12 +14,9 @@ from logging import Formatter, FileHandler
 from flask_wtf import Form
 from forms import *
 from flask_migrate import Migrate
-from sqlalchemy.orm import load_only
-from sqlalchemy.orm import joinedload
-from sqlalchemy import case
 from sqlalchemy import func
 
-from util import createArtistEntity, createShowArtist, createShowVenue, createVenueEntity
+from util import createArtistEntity, createShowArtist, createShowVenue, createVenueEntity, reduceVenues
 
 #----------------------------------------------------------------------------#
 # App Config.
@@ -109,62 +105,19 @@ app.jinja_env.filters['datetime'] = format_datetime
 def index():
     return render_template('pages/home.html')
 
-
 #  Venues
 #  ----------------------------------------------------------------
-def reduceVenues(acc, item):
-    findItem = list(filter(lambda x: x['state'] == item.state and x['city'] == item.city , acc))
-    if(len(findItem) == 0):
-        venue = dict(item)
-        venue['num_upcoming_shows'] = 0
-        newItem = {
-            'state': item.state,
-            'city': item.city,
-            'venues': [venue]
-        }
-        acc.append(newItem)
-    else:
-        findItem[0]['venues'].append(item)
-
-        # findVenue = list(filter(lambda x: x['id'] == item.id , findItem[0]['venues']))
-        # if(len(findVenue) == 0):
-        #     findItem[0]['venues'].append(item)
-        # else:
-        #     findVenue[0]['num_upcoming_shows'] = findVenue[0]['num_upcoming_shows'] + item.num_upcoming_show
-    return acc
-
-num_upcoming_show = case(
-    [
-        (Show.start_time > datetime.now(), 1),
-    ], else_=0
-).label('num_upcoming_show')
 @app.route('/venues')
 def venues():
     # TODO: replace with real venues data.
     #       num_upcoming_shows should be aggregated based on number of upcoming shows per venue.
-    result  = db.session.query(Venue, Show, num_upcoming_show).select_from(Venue).outerjoin(Show).with_entities(Venue.name, Venue.city, Venue.state, Venue.id, num_upcoming_show).all()
-    venues = list(reduce(reduceVenues, result, []))
-    data = [{
-        "city": "San Francisco",
-        "state": "CA",
-        "venues": [{
-            "id": 1,
-            "name": "The Musical Hop",
-            "num_upcoming_shows": 0,
-        }, {
-            "id": 3,
-            "name": "Park Square Live Music & Coffee",
-            "num_upcoming_shows": 1,
-        }]
-    }, {
-        "city": "New York",
-        "state": "NY",
-        "venues": [{
-            "id": 2,
-            "name": "The Dueling Pianos Bar",
-            "num_upcoming_shows": 0,
-        }]
-    }]
+    data = []
+    result  = db.session.query().with_entities(Venue.name, Venue.city, Venue.state, Venue.id).all()
+    for venue in result:
+        val = dict(venue)
+        val['num_upcoming_shows'] = Show.query.filter((Show.venue_id == venue.id) & (Show.start_time >= datetime.now())).count()
+        data.append(val)
+    venues = list(reduce(reduceVenues, data, []))
     return render_template('pages/venues.html', areas=venues)
 
 
@@ -213,7 +166,6 @@ def show_venue(venue_id):
 
 #  Create Venue
 #  ----------------------------------------------------------------
-
 
 @app.route('/venues/create', methods=['GET'])
 def create_venue_form():
@@ -274,7 +226,7 @@ def search_artists():
         'data': []
     }
     
-    search_term=request.form.get('search_term', '')
+    search_term = request.form.get('search_term', '')
     artists =  Artist.query.filter(func.lower(Artist.name).contains(func.lower(search_term))).with_entities(Artist.id, Artist.name).all()
     for artist in artists:
         num_upcoming_shows = Show.query.filter((Show.artist_id == artist.id) & (Show.start_time >= datetime.now())).count()
@@ -410,8 +362,6 @@ def create_artist_submission():
 def shows():
     # displays list of shows at /shows
     # TODO: replace with real venues data.
-    # artist = Artist.query.get(artist_id)
-    # artist.genres = json.loads(artist.genres)
     data = []
     result  = db.session.query(Show, Artist, Venue).join(Artist,Show.artist_id==Artist.id).join(Venue, Show.venue_id==Venue.id).all()
     for row in result:

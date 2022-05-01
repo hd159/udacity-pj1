@@ -1,5 +1,18 @@
 import json
 
+def reduceVenues(acc, item):
+    findItem = list(filter(lambda x: x['state'] == item['state'] and x['city'] == item['city'] , acc))
+    if(len(findItem) == 0):
+        newItem = {
+            'state': item['state'],
+            'city': item['city'],
+            'venues': [item]
+        }
+        acc.append(newItem)
+    else:
+        findItem[0]['venues'].append(item)
+    return acc
+
 def createVenueEntity(data: dict, venue):
     venue.name = data['name']
     venue.city = data['city']
