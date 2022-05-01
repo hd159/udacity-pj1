@@ -209,3 +209,12 @@ h2.monospace {
 .subtitle {
   opacity: 0.5;
 }
+
+.d-flex {
+	display: flex;
+	align-items: center;
+}
+
+.pl-3 {
+  padding-left: 10px;
+}

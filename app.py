@@ -103,7 +103,9 @@ app.jinja_env.filters['datetime'] = format_datetime
 
 @app.route('/')
 def index():
-    return render_template('pages/home.html')
+    recentVenues = Venue.query.with_entities(Venue.name, Venue.city, Venue.state, Venue.id).order_by(Venue.id.desc()).limit(10).all()
+    recentArtists  = Artist.query.with_entities(Artist.name, Artist.id).order_by(Artist.id.desc()).limit(10).all()
+    return render_template('pages/home.html', venues = recentVenues, artists = recentArtists)
 
 #  Venues
 #  ----------------------------------------------------------------
@@ -132,7 +134,11 @@ def search_venues():
     }
     
     search_term=request.form.get('search_term', '')
-    venue =  Venue.query.filter(func.lower(Venue.name).contains(func.lower(search_term))).with_entities(Venue.id, Venue.name).all()
+    filterByname = func.lower(Venue.name).contains(func.lower(search_term))
+    filterBycity = func.lower(Venue.city).contains(func.lower(search_term))
+    filterByState = func.lower(Venue.state).contains(func.lower(search_term))
+
+    venue =  Venue.query.filter(filterByname | filterBycity | filterByState).with_entities(Venue.id, Venue.name).all()
     for v in venue:
         num_upcoming_shows = Show.query.filter((Show.venue_id == v.id) & (Show.start_time >= datetime.now())).count()
         data = {
@@ -227,7 +233,11 @@ def search_artists():
     }
     
     search_term = request.form.get('search_term', '')
-    artists =  Artist.query.filter(func.lower(Artist.name).contains(func.lower(search_term))).with_entities(Artist.id, Artist.name).all()
+    filterByname = func.lower(Artist.name).contains(func.lower(search_term))
+    filterBycity = func.lower(Artist.city).contains(func.lower(search_term))
+    filterByState = func.lower(Artist.state).contains(func.lower(search_term))
+
+    artists =  Artist.query.filter(filterByname | filterBycity | filterByState).with_entities(Artist.id, Artist.name).all()
     for artist in artists:
         num_upcoming_shows = Show.query.filter((Show.artist_id == artist.id) & (Show.start_time >= datetime.now())).count()
         data = {
