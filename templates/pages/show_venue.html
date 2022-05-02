@@ -86,7 +86,7 @@
 		if(confirm(`Are you sure delete ${venue_name}?`)) {
 			try {
 				await fetch(`/venues/${venue_id}`, { method: 'DELETE' });
-				window.location.href = '/'
+				window.location.href = '/venues'
 			} catch (error) {
 				console.log(error, 'errr');
 			}
